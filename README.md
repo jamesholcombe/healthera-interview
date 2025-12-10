@@ -323,16 +323,7 @@ AWS_ENDPOINT_URL=http://localhost:4566 npm run test:integration
 RABBITMQ_URL=amqp://guest:guest@localhost:5672 npm run test:integration
 ```
 
-## Architecture
 
-The application uses Nest.js Dynamic Modules to allow swapping queue providers:
-
-- **QueueService**: Main service that delegates to the configured provider
-- **IQueueService**: Interface that all providers must implement
-- **SqsProvider**: AWS SQS implementation
-- **RabbitMqProvider**: RabbitMQ implementation
-- **QueueModule**: Dynamic module that configures the appropriate provider based on environment variables
-- **QueueGateway**: WebSocket gateway for all queue operations (publish, subscribe, unsubscribe, receive messages)
 
 ## Switching Queue Providers
 

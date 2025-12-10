@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { QueueExceptionFilter } from './queue/filters/queue-exception.filter';
+import { WebSocketExceptionFilter } from './queue/filters/websocket-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,7 +17,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new QueueExceptionFilter());
+  app.useGlobalFilters(new WebSocketExceptionFilter());
 
   await app.listen(process.env.PORT ?? 3000);
 }
