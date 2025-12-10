@@ -3,6 +3,7 @@ import { createTestApp } from './helpers/test-app.factory';
 import { QueueService } from '../../src/queue/queue.service';
 import { QueueTestHelper } from './helpers/queue-test.helper';
 import { LoggerSuppressor } from './helpers/logger-suppressor.helper';
+import { QueueMessage } from '../../src/queue/interfaces/queue';
 
 describe('Queue Service SQS Integration', () => {
   let app: INestApplication;
@@ -109,7 +110,7 @@ describe('Queue Service SQS Integration', () => {
 
   describe('Subscribe', () => {
     let queueName: string;
-    const receivedMessages: any[] = [];
+    const receivedMessages: QueueMessage[] = [];
 
     beforeEach(() => {
       queueName = queueHelper.generateQueueName('test-subscribe');
@@ -155,7 +156,7 @@ describe('Queue Service SQS Integration', () => {
     }, 8000);
 
     it('should receive multiple messages', async () => {
-      const handler = async (message: any) => {
+      const handler = (message: QueueMessage) => {
         receivedMessages.push(message);
       };
 
@@ -191,7 +192,7 @@ describe('Queue Service SQS Integration', () => {
       ]);
 
       try {
-        const handler = async () => {
+        const handler = () => {
           throw new Error('Handler error');
         };
 
@@ -247,7 +248,7 @@ describe('Queue Service SQS Integration', () => {
     });
 
     it('should stop receiving messages after unsubscribe', async () => {
-      const receivedMessages: any[] = [];
+      const receivedMessages: QueueMessage[] = [];
 
       await queueService.subscribe({
         queueName,
@@ -296,7 +297,7 @@ describe('Queue Service SQS Integration', () => {
     });
 
     it('should clean up polling interval on unsubscribe', async () => {
-      const receivedMessages: any[] = [];
+      const receivedMessages: QueueMessage[] = [];
 
       await queueService.subscribe({
         queueName,
@@ -340,7 +341,7 @@ describe('Queue Service SQS Integration', () => {
     }, 10000);
 
     it('should handle multiple subscribe/unsubscribe cycles without leaks', async () => {
-      const receivedMessages: any[] = [];
+      const receivedMessages: QueueMessage[] = [];
 
       // Perform multiple subscribe/unsubscribe cycles
       for (let i = 0; i < 3; i++) {
@@ -382,7 +383,7 @@ describe('Queue Service SQS Integration', () => {
     }, 15000);
 
     it('should stop polling immediately on unsubscribe', async () => {
-      const receivedMessages: any[] = [];
+      const receivedMessages: QueueMessage[] = [];
 
       await queueService.subscribe({
         queueName,

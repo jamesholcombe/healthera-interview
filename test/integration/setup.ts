@@ -47,6 +47,9 @@ const suppressedWarnPatterns = [
 ];
 
 // Only suppress if we're in a test environment and the message matches patterns
+// Using any[] here because Jest's mock function signature accepts any arguments
+// and console.error can accept any number of arguments of any type
+
 global.console.error = jest.fn((...args: any[]) => {
   const message = args[0]?.toString() || '';
 
@@ -58,6 +61,9 @@ global.console.error = jest.fn((...args: any[]) => {
     originalError(...args);
   }
 });
+
+// Using any[] here because Jest's mock function signature accepts any arguments
+// and console.warn can accept any number of arguments of any type
 
 global.console.warn = jest.fn((...args: any[]) => {
   const message = args[0]?.toString() || '';

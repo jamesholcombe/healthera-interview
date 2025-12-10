@@ -84,6 +84,8 @@ describe('QueueGateway', () => {
         mockSocket.id,
         new Set(['queue1', 'queue2']),
       );
+      // Using type assertion to access private method for testing
+
       const unsubscribeSpy = jest.spyOn(gateway as any, 'unsubscribeFromQueue');
 
       gateway.handleDisconnect(mockSocket);
@@ -186,7 +188,7 @@ describe('QueueGateway', () => {
         id: 'msg-1',
       };
 
-      handler?.(testMessage);
+      void handler?.(testMessage);
 
       expect(client1.emit).toHaveBeenCalledWith('queue:message', {
         queueName: 'test-queue',

@@ -1,5 +1,32 @@
 import ioClient from 'socket.io-client';
+import { QueueMessage } from '../../../src/queue/interfaces/queue';
+
 type ClientSocket = ReturnType<typeof ioClient>;
+
+type SubscribeResponse = {
+  queueName: string;
+  message: string;
+};
+
+type UnsubscribeResponse = {
+  queueName: string;
+  message: string;
+};
+
+type PublishResponse = {
+  queueName: string;
+  message: string;
+};
+
+type QueueMessageEvent = {
+  queueName: string;
+  message: QueueMessage;
+};
+
+type QueueErrorEvent = {
+  message: string;
+  error?: string;
+};
 
 export interface SocketClientOptions {
   port?: number;
@@ -42,7 +69,7 @@ export class SocketClientHelper {
     }
   }
 
-  subscribe(queueName: string): Promise<any> {
+  subscribe(queueName: string): Promise<SubscribeResponse> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject(new Error('Socket not connected'));
@@ -67,7 +94,7 @@ export class SocketClientHelper {
     });
   }
 
-  unsubscribe(queueName: string): Promise<any> {
+  unsubscribe(queueName: string): Promise<UnsubscribeResponse> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject(new Error('Socket not connected'));
@@ -95,7 +122,7 @@ export class SocketClientHelper {
   publish(
     queueName: string,
     message: { body: string; attributes?: Record<string, string> },
-  ): Promise<any> {
+  ): Promise<PublishResponse> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject(new Error('Socket not connected'));
@@ -123,9 +150,7 @@ export class SocketClientHelper {
     });
   }
 
-  waitForMessage(
-    timeoutMs: number = 10000,
-  ): Promise<{ queueName: string; message: any }> {
+  waitForMessage(timeoutMs = 10000): Promise<QueueMessageEvent> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject(new Error('Socket not connected'));
@@ -143,7 +168,7 @@ export class SocketClientHelper {
     });
   }
 
-  waitForError(timeoutMs: number = 5000): Promise<any> {
+  waitForError(timeoutMs: number = 5000): Promise<QueueErrorEvent> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject(new Error('Socket not connected'));

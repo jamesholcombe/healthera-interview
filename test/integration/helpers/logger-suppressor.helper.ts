@@ -52,6 +52,9 @@ export class LoggerSuppressor {
     this.originalConsoleError = console.error;
     this.originalConsoleWarn = console.warn;
 
+    // Using any[] here because Jest's mock function signature accepts any arguments
+    // and console.error can accept any number of arguments of any type
+
     console.error = jest.fn((...args: any[]) => {
       const message = args[0]?.toString() || '';
       const shouldSuppress = patterns.some((pattern) =>
@@ -62,6 +65,9 @@ export class LoggerSuppressor {
         this.originalConsoleError(...args);
       }
     });
+
+    // Using any[] here because Jest's mock function signature accepts any arguments
+    // and console.warn can accept any number of arguments of any type
 
     console.warn = jest.fn((...args: any[]) => {
       const message = args[0]?.toString() || '';

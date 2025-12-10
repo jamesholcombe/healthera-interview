@@ -23,6 +23,9 @@ const suppressedWarnPatterns = [
 ];
 
 // Suppress console.error
+// Using any[] here because Jest's mock function signature accepts any arguments
+// and console.error can accept any number of arguments of any type
+
 global.console.error = jest.fn((...args: any[]) => {
   const message = args[0]?.toString() || '';
 
@@ -36,6 +39,9 @@ global.console.error = jest.fn((...args: any[]) => {
 });
 
 // Suppress console.warn
+// Using any[] here because Jest's mock function signature accepts any arguments
+// and console.warn can accept any number of arguments of any type
+
 global.console.warn = jest.fn((...args: any[]) => {
   const message = args[0]?.toString() || '';
 
@@ -49,16 +55,25 @@ global.console.warn = jest.fn((...args: any[]) => {
 });
 
 // Suppress process.stderr.write (used by NestJS Logger)
-process.stderr.write = jest.fn((chunk: any, encoding?: any, cb?: any) => {
-  const message = chunk?.toString() || '';
+// Using any for chunk because it can be string, Buffer, or Uint8Array
+// Using any for encoding and cb because Node.js types are complex and Jest mocks need flexibility
 
-  const shouldSuppress = [
-    ...suppressedErrorPatterns,
-    ...suppressedWarnPatterns,
-  ].some((pattern) => message.includes(pattern));
+process.stderr.write = jest.fn(
+  (
+    chunk: any,
+    encoding?: BufferEncoding,
+    cb?: (error?: Error | null) => void,
+  ) => {
+    const message = chunk?.toString() || '';
 
-  if (!shouldSuppress && originalStderrWrite) {
-    return originalStderrWrite.call(process.stderr, chunk, encoding, cb);
-  }
-  return true;
-}) as typeof process.stderr.write;
+    const shouldSuppress = [
+      ...suppressedErrorPatterns,
+      ...suppressedWarnPatterns,
+    ].some((pattern) => message.includes(pattern));
+
+    if (!shouldSuppress && originalStderrWrite) {
+      return originalStderrWrite.call(process.stderr, chunk, encoding, cb);
+    }
+    return true;
+  },
+) as typeof process.stderr.write;

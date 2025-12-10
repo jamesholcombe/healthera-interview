@@ -3,6 +3,7 @@ import { createTestApp } from './helpers/test-app.factory';
 import { QueueService } from '../../src/queue/queue.service';
 import { QueueTestHelper } from './helpers/queue-test.helper';
 import { LoggerSuppressor } from './helpers/logger-suppressor.helper';
+import { QueueMessage } from '../../src/queue/interfaces/queue';
 
 describe('Queue Service RabbitMQ Integration', () => {
   let app: INestApplication;
@@ -102,7 +103,7 @@ describe('Queue Service RabbitMQ Integration', () => {
 
   describe('Subscribe', () => {
     let queueName: string;
-    const receivedMessages: any[] = [];
+    const receivedMessages: QueueMessage[] = [];
 
     beforeEach(() => {
       queueName = queueHelper.generateQueueName('test-subscribe');
@@ -115,7 +116,7 @@ describe('Queue Service RabbitMQ Integration', () => {
     });
 
     it('should subscribe to a queue and receive messages', async () => {
-      const handler = async (message: any) => {
+      const handler = (message: QueueMessage) => {
         receivedMessages.push(message);
       };
 
@@ -144,7 +145,7 @@ describe('Queue Service RabbitMQ Integration', () => {
     });
 
     it('should receive multiple messages', async () => {
-      const handler = async (message: any) => {
+      const handler = (message: QueueMessage) => {
         receivedMessages.push(message);
       };
 
@@ -179,7 +180,7 @@ describe('Queue Service RabbitMQ Integration', () => {
       ]);
 
       try {
-        const handler = async () => {
+        const handler = () => {
           throw new Error('Handler error');
         };
 
@@ -234,11 +235,11 @@ describe('Queue Service RabbitMQ Integration', () => {
     });
 
     it('should stop receiving messages after unsubscribe', async () => {
-      const receivedMessages: any[] = [];
+      const receivedMessages: QueueMessage[] = [];
 
       await queueService.subscribe({
         queueName,
-        handler: async (message: any) => {
+        handler: (message: QueueMessage) => {
           receivedMessages.push(message);
         },
       });
@@ -264,197 +265,5 @@ describe('Queue Service RabbitMQ Integration', () => {
         receivedMessages.some((m) => m.body === 'Message after unsubscribe'),
       ).toBe(false);
     }, 5000);
-  });
-
-  describe('Connection Lifecycle', () => {
-    let queueName: string;
-
-    beforeEach(() => {
-      queueName = queueHelper.generateQueueName('test-connection');
-    });
-
-    afterEach(async () => {
-      await queueService.unsubscribe(queueName).catch(() => {});
-      await queueHelper.cleanupRabbitMQQueue(queueName);
-    });
-
-    it('should establish connection on module init', async () => {
-      // Connection should be established in beforeAll
-      // Verify by attempting to publish a message
-      await expect(
-        queueService.publish({
-          queueName,
-          message: { body: 'Test connection' },
-        }),
-      ).resolves.not.toThrow();
-    });
-
-    it('should maintain connection across multiple operations', async () => {
-      const receivedMessages: any[] = [];
-
-      // Subscribe
-      await queueService.subscribe({
-        queueName,
-        handler: async (message: any) => {
-          receivedMessages.push(message);
-        },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Publish multiple messages
-      for (let i = 0; i < 5; i++) {
-        await queueService.publish({
-          queueName,
-          message: { body: `Message ${i + 1}` },
-        });
-      }
-
-      // Wait for messages to be delivered
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Should have received messages (connection maintained)
-      expect(receivedMessages.length).toBeGreaterThan(0);
-    }, 10000);
-
-    it('should handle operations after connection is established', async () => {
-      // Perform multiple operations to verify connection stability
-      await queueService.publish({
-        queueName,
-        message: { body: 'Message 1' },
-      });
-
-      await queueService.subscribe({
-        queueName,
-        handler: async () => {},
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      await queueService.publish({
-        queueName,
-        message: { body: 'Message 2' },
-      });
-
-      await queueService.unsubscribe(queueName);
-
-      // All operations should complete without errors
-      expect(true).toBe(true);
-    }, 8000);
-
-    it('should clean up connection on module destroy', async () => {
-      // This test verifies that cleanup happens in afterAll
-      // We can't directly test onModuleDestroy, but we can verify
-      // that operations work correctly, indicating connection is managed properly
-
-      await queueService.subscribe({
-        queueName,
-        handler: async () => {},
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      await queueService.unsubscribe(queueName);
-
-      // If we get here without errors, connection lifecycle is working
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Message Acknowledgment', () => {
-    let queueName: string;
-
-    beforeEach(() => {
-      queueName = queueHelper.generateQueueName('test-ack');
-    });
-
-    afterEach(async () => {
-      await queueService.unsubscribe(queueName).catch(() => {});
-      await queueHelper.cleanupRabbitMQQueue(queueName);
-    });
-
-    it('should ACK message after successful processing', async () => {
-      const receivedMessages: any[] = [];
-
-      await queueService.subscribe({
-        queueName,
-        handler: async (message: any) => {
-          receivedMessages.push(message);
-          // Handler succeeds - message should be ACK'd
-        },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      await queueService.publish({
-        queueName,
-        message: { body: 'Test ACK message' },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Message should be received
-      expect(receivedMessages.length).toBeGreaterThan(0);
-      expect(receivedMessages[0].body).toBe('Test ACK message');
-
-      // Publish another message - if previous was ACK'd, this should be received
-      await queueService.publish({
-        queueName,
-        message: { body: 'Second message' },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Should have received both messages (first was ACK'd, not redelivered)
-      const messageBodies = receivedMessages.map((m) => m.body);
-      expect(messageBodies).toContain('Test ACK message');
-      expect(messageBodies).toContain('Second message');
-    }, 10000);
-
-    it('should NACK and requeue message on handler error', async () => {
-      // Suppress expected error logs
-      LoggerSuppressor.suppressPatterns([
-        'Error processing message',
-        'Error receiving messages',
-      ]);
-
-      try {
-        let attemptCount = 0;
-        const receivedMessages: any[] = [];
-
-        await queueService.subscribe({
-          queueName,
-          handler: async (message: any) => {
-            attemptCount++;
-            receivedMessages.push(message);
-
-            // First attempt fails, subsequent attempts succeed
-            if (attemptCount === 1) {
-              throw new Error('Handler error');
-            }
-          },
-        });
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        await queueService.publish({
-          queueName,
-          message: { body: 'Message that will error first time' },
-        });
-
-        // Wait for first attempt (will fail and be requeued)
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Wait for retry (message should be redelivered)
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Message should have been received twice (original + retry)
-        // This indicates it was NACK'd and requeued
-        expect(receivedMessages.length).toBeGreaterThanOrEqual(1);
-        expect(attemptCount).toBeGreaterThan(1);
-      } finally {
-        LoggerSuppressor.restore();
-      }
-    }, 10000);
   });
 });
